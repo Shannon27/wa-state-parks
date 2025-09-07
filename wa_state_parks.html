@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Washington State Parks Map</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' font-size='80'>🌲</text></svg>">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+  <style>
+html, body, #map-container, #map {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.triangle-marker-visited,
+.triangle-marker-unvisited {
+  background: transparent;
+}
+
+.triangle-marker-visited .triangle {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid #2E8B57;
+}
+
+.triangle-marker-unvisited .triangle {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid #8B4513;
+}
+
+.custom-tooltip {
+  position: absolute;
+  z-index: 9999;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.park-tooltip {
+  text-align: center;
+  padding: 5px;
+}
+
+.park-image {
+  width: 150px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 3px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.leaflet-control.legend {
+  background: #fdfdfd;
+  padding: 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #333;
+  min-width: 180px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.legend-label {
+  flex-grow: 1;
+  padding-left: 6px;
+}
+
+.legend-triangle {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid;
+}
+
+.legend-progress {
+  width: 100%;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.legend-progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #2E8B57, #3cb371);
+  transition: width 0.4s ease;
+}
+
+.legend-progress-label {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 6px;
+  color: #555;
+}
+
+.leaflet-tooltip {
+  z-index: 1001 !important;
+}
+
+  </style>
+</head>
+<body>
+
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
+  <script>
+    const washingtonBounds = [
+      [45.5, -125],
+      [49.1, -116.5]
+    ];
+
+    const map = L.map('map', {
+      center: [47.5, -120.5],
+      zoom: 7,
+      minZoom: 6,
+      maxZoom: 17,
+      maxBounds: washingtonBounds,
+      maxBoundsViscosity: 1.0
+    });
+
+    // Terrain-style basemap using Esri World Topo
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri — Source: Esri, DeLorme, NAVTEQ, USGS, and others',
+      maxZoom: 17
+    }).addTo(map);
+
+   // GeoJSON layer with all parks from your CSV
+    const stateParksGeoJSON = {
+      "type": "FeatureCollection",
+      "features": [
+{
+            "type": "Feature",
+            "properties": { "name": "Alta Lake", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-119.9347, 48.032181] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Anderson Lake", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.8075, 48.01413] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Battle Ground Lake", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.4867, 45.802952] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Bay View", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.4802, 48.487591] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Beacon Rock", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.0253, 45.62318] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Belfair", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.877, 47.431671] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Birch Bay", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7711, 48.903469] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Blake Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.5, 47.55] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Blind Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Bogachiel", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.3643, 47.89481] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Bottle Beach", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.0404, 46.89278] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Bridgeport", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-119.6258, 48.003071] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Bridle Trails", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.1856, 47.655411] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Brooks Memorial", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.6656, 45.94976] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Cama Beach", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.5087, 48.145241] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Camano Island", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.5028, 48.131222] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Camp Wooten", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.6949, 46.239491] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Cape Disappointment", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.0632, 46.298409] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Centennial Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.4, 47.7] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Clark Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Columbia Hills", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.1239, 45.649021] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Columbia Plateau Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.5, 47.2] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Conconully", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-119.7512, 48.557159] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Crawford", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.3702, 48.993061] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Curlew Lake", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-118.6568, 48.722591] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Cutts Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.6867, 47.321701] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Daroga", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.1958, 47.707741] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Dash Point", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.4071, 47.317791] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Deception Pass", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.6443, 48.41674] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Doe Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Dosewallips", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.9002, 47.685551] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Doug's Beach", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-121.235, 45.678101] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Eagle Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.6967, 47.18663] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Federation Forest", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.6892, 47.15332] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fields Spring", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.1688, 46.087261] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Flaming Geyser", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.038, 47.278561] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Casey", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.6375, 48.165058] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Columbia", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.9232, 46.253799] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Ebey", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.7584, 48.224621] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Flagler", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7016, 48.085861] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Simcoe", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.8362, 46.344921] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Townsend", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.7945, 48.078049] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Fort Worden", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.769, 48.132431] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Ginkgo Petrified Forest", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-119.9909, 46.93692] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Goldendale Observatory", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.8161, 45.83823] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Grayland Beach", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.0915, 46.794189] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Griffiths-Priday", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.1773, 47.114182] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Hope Island - Mason", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.1, 47.3] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Hope Island - Skagit", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.5, 48.4] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Ike Kinswa", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.5298, 46.55534] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Illahee", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.5974, 47.595581] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Jackson House", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8224, 46.541328] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "James Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.8, 48.4] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Jarrell Cove", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8811, 47.285801] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Joemma Beach", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8014, 47.22467] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Jones Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.0, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Joseph Whidbey", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.7129, 48.307831] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Kanaskat-Palmer", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.8987, 47.311981] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Kinney Point", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.6876, 48.008862] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Kitsap Memorial", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.6444, 47.816422] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Klickitat Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-121.0, 45.7] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Kopachuck", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.6797, 47.308151] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lake Chelan", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.2004, 47.873711] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lake Easton", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.1847, 47.245098] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lake Sammamish", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.0677, 47.551899] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lake Sylvia", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.6012, 46.9916] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lake Wenatchee", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.7134, 47.806961] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Larrabee", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.4901, 48.65313] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Leadbetter Point", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.0291, 46.587769] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lewis & Clark", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8133, 46.522499] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lewis & Clark Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-118.072, 46.287338] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lime Kiln Point", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.1491, 48.514469] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lincoln Rock", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.2834, 47.534248] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Lyons Ferry", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-118.2203, 46.595119] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Manchester", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.5563, 47.57732] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Maryhill", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.8347, 45.68224] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Matia Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8, 48.7] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "McMicken Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9, 47.2] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Millersylvania", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9059, 46.909649] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Moran", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8625, 48.657681] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Mount Pilchuck", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-121.8146, 48.066071] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Mount Spokane", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.1329, 47.883579] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Mystery Bay", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.6942, 48.059959] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Nisqually", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.3296, 46.863461] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Nolte", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.9419, 47.268169] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Obstruction Pass", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.825, 48.609001] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Ocean City", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.1566, 47.031471] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Olallie", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.6685, 47.441059] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Olmstead Place", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.4671, 46.979012] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Pacific Beach", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.2022, 47.206219] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Pacific Pines", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-124.0551, 46.500889] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Palouse Falls State Park Heritage Site", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-118.2288, 46.664101] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Palouse to Cascades Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-121.0, 47.4] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Paradise Point", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7059, 45.86591] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Patos Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9, 48.8] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Peace Arch", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7516, 49.000751] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Pearrygin Lake", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.1584, 48.495739] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Penrose Point", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7485, 47.25354] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Peshastin Pinnacles", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.5205, 47.538651] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Pleasant Harbor", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.9146, 47.665058] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Posey Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.0, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Potholes", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-119.3486, 46.970791] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Potlatch", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-123.158, 47.362251] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Rainbow Falls", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.2343, 46.634411] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Rasar", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.9033, 48.518471] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Reed Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.3079, 45.552799] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Riverside", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-117.5453, 47.750729] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Rockport", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-121.6156, 48.487629] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Sacajawea", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-119.0492, 46.207779] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Saddlebag Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9, 48.6] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Saint Edward", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.2465, 47.733261] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Saltwater", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.321, 47.37476] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Scenic Beach", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.8469, 47.646259] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Schafer", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.4665, 47.09774] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Seaquest", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8176, 46.295731] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Sequim Bay", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.0308, 48.040699] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Shine Tidelands", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.6355, 47.867821] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Skagit Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.5, 48.5] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "South Whidbey", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.5909, 48.056252] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Spencer Spit", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.8662, 48.53236] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Spring Creek Hatchery", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.5609, 45.72308] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Squak Mountain", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.0548, 47.480579] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Squilchuck", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.3713, 47.314529] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Steamboat Rock", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-119.0924, 47.868431] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Steptoe Battlefield", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.3659, 47.229099] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Steptoe Butte", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-117.2828, 47.035099] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Stuart Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.2, 48.7] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Sucia Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.9, 48.7] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Sun Lakes-Dry Falls", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-119.399, 47.597012] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Tolmie", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-122.7729, 47.119362] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Triton Cove", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.9869, 47.608639] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Turn Island", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.0, 48.5] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Twanoh", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-122.9747, 47.377522] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Twenty-Five Mile Creek", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.2594, 47.99213] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Twin Harbors", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.1082, 46.85614] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Wallace Falls", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-121.68, 47.86565] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Wanapum Recreation Area", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-119.9, 46.9] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Wenatchee Confluence", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-120.3288, 47.46236] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Westport Light", "visited": true },
+            "geometry": { "type": "Point", "coordinates": [-124.1112, 46.904099] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Willapa Hills Trail", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.0, 46.5] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Willie Keil's Grave State Park Heritage Site", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-123.661, 46.645538] }
+          },
+          {
+            "type": "Feature",
+            "properties": { "name": "Yakima Sportsman", "visited": false },
+            "geometry": { "type": "Point", "coordinates": [-120.4529, 46.591881] }
+          }
+      ]
+    };
+
+    // Add GeoJSON layer to map
+L.geoJSON(stateParksGeoJSON, {
+  pointToLayer: function (feature, latlng) {
+    const markerClass = feature.properties.visited
+      ? 'triangle-marker-visited'
+      : 'triangle-marker-unvisited';
+
+    return L.marker(latlng, {
+      icon: L.divIcon({
+        className: markerClass,
+        html: '<div class="triangle"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 12]
+      })
+    });
+  },
+
+  onEachFeature: function (feature, layer) {
+    let tooltipContent = `<strong>${feature.properties.name}</strong>`;
+
+    if (feature.properties.visited) {
+      const imageName = feature.properties.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') + '.jpeg';
+
+      tooltipContent = `
+        <div class="park-tooltip">
+          <img src="images/${imageName}" class="park-image" />
+          <strong>${feature.properties.name}</strong>
+        </div>
+      `;
+    }
+
+    layer.bindTooltip(tooltipContent, {
+      permanent: false,
+      direction: 'top',
+      offset: [0, -10],
+      className: 'custom-tooltip'
+    });
+  }
+}).addTo(map);
+
+const legend = L.control({ position: 'bottomright' });
+
+legend.onAdd = function () {
+  const div = L.DomUtil.create('div', 'leaflet-control legend');
+
+const visitedCount = document.querySelectorAll('.triangle-marker-visited').length;
+const unvisitedCount = document.querySelectorAll('.triangle-marker-unvisited').length;
+const totalCount = visitedCount + unvisitedCount;
+const percentVisited = totalCount > 0 ? Math.round((visitedCount / totalCount) * 100) : 0;
+
+div.innerHTML = `
+
+  <div class="legend-item">
+    <div class="legend-triangle" style="border-bottom-color: #2E8B57;"></div>
+    <div class="legend-label">Visited: ${visitedCount}</div>
+  </div>
+
+  <div class="legend-item">
+    <div class="legend-triangle" style="border-bottom-color: #8B4513;"></div>
+    <div class="legend-label">Not (Yet) Visited: ${unvisitedCount}</div>
+  </div>
+
+  <div class="legend-progress">
+    <div class="legend-progress-bar" style="width: ${percentVisited}%;"></div>
+  </div>
+
+`;
+
+return div;
+
+};
+
+legend.addTo(map);
+
+  </script>
+</body>
+</html>
